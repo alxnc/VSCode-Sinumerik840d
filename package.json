@@ -1,0 +1,36 @@
+{
+  "name": "sinumerik-840d-edycja",
+  "displayName": "Manipulator programów CNC",
+  "description": "Rozszerzenie do odwracania kolejności linii oraz przenumerowywania etykiet/linii w zaznaczonym tekście.",
+  "version": "1.0.0",
+  "publisher": "Arkadiusz alx A.",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onLanguage:sinumerik"],
+  "main": "./extension.js",
+   "repository": {
+    "type": "git",
+    "url": "https://github.com/twoj-profil/sinumerik-840d-edycja.git"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "sinumerik-840d-edycja.uruchom",
+        "title": "Sinumerik 840d edycja: Wykonaj operację"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "eslint": "^7.32.0"
+  }
+}
