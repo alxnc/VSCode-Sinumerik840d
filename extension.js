@@ -171,14 +171,32 @@ async function wykonajPrzenumerowanieLinii(editor, startValue, stepValue) {
     
     const przetworzoneLinie = linie.map((linia, index) => {
         if (index >= startLineIdx && index <= endLineIdx) {
-            const regexPoczatkuLinii = /^(\s*)([N:])(\d+)/;
+            // Zmodyfikowane i zoptymalizowane wyrażenie regularne:
+            // Grupa 1: (\s*)  -> opcjonalne wcięcia (spacje/tabulacje) na początku linii
+            // Grupa 2: ([N:])  -> znak N lub : jako wskaźnik bloku
+            // (?=\d|\s|$|;|[\(]) -> Lookahead: upewniamy się, że po N/: następuje cyfra, spacja, komentarz lub koniec linii (zapobiega to niszczeniu np. NET_CONFIG)
+            // Grupa 3: (\s*)  -> opcjonalne spacje dzielące wskaźnik od numeru
+            // Grupa 4: (\d*)  -> opcjonalne cyfry (gwiazdka zamiast plusa pozwala dopasować samo "N " bez numeru)
+            const regexPoczatkuLinii = /^(\s*)([N:])(?=\d|\s|$|;|[\(])(\s*)(\d*)/;
             const dopasowanie = linia.match(regexPoczatkuLinii);
 
             if (dopasowanie) {
-                const bialeZnaki = dopasowanie[1];
+                const bialeZnakiPoczatek = dopasowanie[1];
                 const znak = dopasowanie[2];
+                const bialeZnakiSrodek = dopasowanie[3]; 
+                const znalezionyNumer = dopasowanie[4];
                 const resztaLinii = linia.substring(dopasowanie[0].length);
-                const nowaLinia = `${bialeZnaki}${znak}${aktualnyNumer}${resztaLinii}`;
+                
+                let nowaLinia;
+                if (znalezionyNumer !== "") {
+                    // Jeśli linia miała już numer (np. N5 IF...), zachowujemy standardowy układ
+                    nowaLinia = `${bialeZnakiPoczatek}${znak}${bialeZnakiSrodek}${aktualnyNumer}${resztaLinii}`;
+                } else {
+                    // Jeśli linia nie miała numeru (np. N F_OTW_ZEW), wstawiamy numer bezpośrednio po N,
+                    // a pierwotną spację (separator) przesuwamy za wstawioną liczbę, aby ładnie oddzielić kod
+                    nowaLinia = `${bialeZnakiPoczatek}${znak}${aktualnyNumer}${bialeZnakiSrodek}${resztaLinii}`;
+                }
+                
                 aktualnyNumer += stepValue;
                 return nowaLinia;
             }
