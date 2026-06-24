@@ -8,7 +8,7 @@ const vscode = require('vscode');
 function activate(context) {
 
     // 1. REJESTRACJA GŁÓWNEJ KOMENDY (MENU WYBORU)
-    let disposableUruchom = vscode.commands.registerCommand('sinumerik-840d-edycja.uruchom', async function () {
+    let disposableUrunom = vscode.commands.registerCommand('sinumerik-840d-edycja.uruchom', async function () {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showWarningMessage('Brak aktywnego edytora tekstu!');
@@ -138,7 +138,7 @@ function activate(context) {
         await wykonajPrzenumerowanieLinii(editor, 5, 5);
     });
 
-    context.subscriptions.push(disposableUruchom);
+    context.subscriptions.push(disposableUrunom);
     context.subscriptions.push(disposableSzybkieLinii);
 }
 
@@ -189,12 +189,22 @@ async function wykonajPrzenumerowanieLinii(editor, startValue, stepValue) {
                 
                 let nowaLinia;
                 if (znalezionyNumer !== "") {
-                    // Jeśli linia miała już numer (np. N5 IF...), zachowujemy standardowy układ
-                    nowaLinia = `${bialeZnakiPoczatek}${znak}${bialeZnakiSrodek}${aktualnyNumer}${resztaLinii}`;
+                    // Jeśli linia miała już numer (np. N5 IF...), zachowujemy standardowy układ.
+                    // Dodatkowo weryfikujemy, czy po wstawieniu nowej liczby potrzebna jest spacja rozdzielająca (np. N320ENDWHILE -> N320 ENDWHILE)
+                    let separator = "";
+                    if (resztaLinii !== "" && !/^\s/.test(resztaLinii)) {
+                        separator = " ";
+                    }
+                    nowaLinia = `${bialeZnakiPoczatek}${znak}${bialeZnakiSrodek}${aktualnyNumer}${separator}${resztaLinii}`;
                 } else {
                     // Jeśli linia nie miała numeru (np. N F_OTW_ZEW), wstawiamy numer bezpośrednio po N,
-                    // a pierwotną spację (separator) przesuwamy za wstawioną liczbę, aby ładnie oddzielić kod
-                    nowaLinia = `${bialeZnakiPoczatek}${znak}${aktualnyNumer}${bialeZnakiSrodek}${resztaLinii}`;
+                    // a pierwotną spację (separator) przesuwamy za wstawioną liczbę, aby ładnie oddzielić kod.
+                    // Tutaj również dbamy o to, by zawsze istniał separator, gdy reszta linii nie jest pusta i nie zaczyna się od spacji.
+                    let separator = bialeZnakiSrodek;
+                    if (separator === "" && resztaLinii !== "" && !/^\s/.test(resztaLinii)) {
+                        separator = " ";
+                    }
+                    nowaLinia = `${bialeZnakiPoczatek}${znak}${aktualnyNumer}${separator}${resztaLinii}`;
                 }
                 
                 aktualnyNumer += stepValue;
