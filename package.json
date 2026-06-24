@@ -2,7 +2,7 @@
   "name": "sinumerik-840d-edycja",
   "displayName": "Manipulator programów CNC",
   "description": "Rozszerzenie do odwracania kolejności linii oraz przenumerowywania etykiet/linii w zaznaczonym tekście.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "alxnc",
   "engines": {
     "vscode": "^1.60.0"
