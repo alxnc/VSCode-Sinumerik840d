@@ -2,8 +2,8 @@
   "name": "sinumerik-840d-edycja",
   "displayName": "Manipulator programów CNC",
   "description": "Rozszerzenie do odwracania kolejności linii oraz przenumerowywania etykiet/linii w zaznaczonym tekście.",
-  "version": "1.0.0",
-  "publisher": "Arkadiusz alx A.",
+  "version": "1.0.1",
+  "publisher": "alxnc",
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -21,6 +21,18 @@
       {
         "command": "sinumerik-840d-edycja.uruchom",
         "title": "Sinumerik 840d edycja: Wykonaj operację"
+      },
+      {
+        "command": "sinumerik-840d-edycja.szybkieNumerowanieLinii",
+        "title": "Sinumerik 840d edycja: Szybkie przenumerowanie linii (5, 5)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "sinumerik-840d-edycja.szybkieNumerowanieLinii",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+n",
+        "when": "editorTextFocus && !editorReadonly"
       }
     ]
   },

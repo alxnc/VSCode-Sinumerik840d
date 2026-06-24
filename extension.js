@@ -6,16 +6,15 @@ const vscode = require('vscode');
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-    // Rejestrujemy naszą główną komendę
-    let disposable = vscode.commands.registerCommand('sinumerik-840d-edycja.uruchom', async function () {
-        // Pobieramy aktywny edytor tekstu
+
+    // 1. REJESTRACJA GŁÓWNEJ KOMENDY (MENU WYBORU)
+    let disposableUruchom = vscode.commands.registerCommand('sinumerik-840d-edycja.uruchom', async function () {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showWarningMessage('Brak aktywnego edytora tekstu!');
             return;
         }
 
-        // Przygotowujemy menu szybkiego wyboru (QuickPick) z 3 opcjami
         const opcje = [
             {
                 label: '1. Przenumeruj linie programu (N / :)',
@@ -31,25 +30,21 @@ function activate(context) {
             }
         ];
 
-        // Wyświetlamy menu użytkownikowi
         const wybor = await vscode.window.showQuickPick(opcje, {
             placeHolder: 'Wybierz operację do wykonania'
         });
 
-        // Jeśli użytkownik anulował wybór (np. nacisnął Esc)
         if (!wybor) {
             return;
         }
 
-        // Pobieramy zaznaczenie i tekst tylko dla opcji, które tego wymagają
         const selection = editor.selection;
         const selectedText = editor.document.getText(selection);
 
-        // Obsługa wybranej opcji
         if (wybor.label.startsWith('1')) {
-            // OPCJA 1: Przenumerowanie linii programu (zaczynających się od N lub :)
-
-            // 1. Pytamy o numer początkowy
+            // OPCJA 1: Interaktywne przenumerowanie linii programu
+            
+            // Pytamy o numer początkowy
             const startInput = await vscode.window.showInputBox({
                 prompt: 'Podaj numer początkowy dla linii programu',
                 value: '5',
@@ -58,10 +53,10 @@ function activate(context) {
                     return (isNaN(num) || num < 0) ? 'Wprowadź liczbę całkowitą nieujemną' : null;
                 }
             });
-            if (startInput === undefined) return; // Anulowano
+            if (startInput === undefined) return;
             const startValue = parseInt(startInput, 10);
 
-            // 2. Pytamy o krok numeracji
+            // Pytamy o krok numeracji
             const stepInput = await vscode.window.showInputBox({
                 prompt: 'Podaj krok (increment) dla kolejnych linii',
                 value: '5',
@@ -70,76 +65,11 @@ function activate(context) {
                     return (isNaN(num) || num <= 0) ? 'Wprowadź liczbę całkowitą większą od 0' : null;
                 }
             });
-            if (stepInput === undefined) return; // Anulowano
+            if (stepInput === undefined) return;
             const stepValue = parseInt(stepInput, 10);
 
-            // Pobieramy pełną zawartość dokumentu
-            const dokument = editor.document;
-            const pelnyTekst = dokument.getText();
-            const linie = pelnyTekst.split(/\r?\n/);
-
-            let aktualnyNumer = startValue;
-
-            // Ustalamy zakres linii do modyfikacji (cały plik lub samo zaznaczenie)
-            const hasSelection = !selection.isEmpty;
-            let startLineIdx = 0;
-            let endLineIdx = linie.length - 1;
-
-            if (hasSelection) {
-                startLineIdx = selection.start.line;
-                endLineIdx = selection.end.line;
-
-                // Jeśli zaznaczenie kończy się na początku nowej linii (częste przy zaznaczaniu całych wierszy),
-                // ignorujemy tę pustą linię końcową, aby nie modyfikować wiersza poniżej zaznaczenia.
-                if (selection.end.character === 0 && endLineIdx > startLineIdx) {
-                    endLineIdx--;
-                }
-            }
-
-            // Przetwarzamy linię po linii
-            const przetworzoneLinie = linie.map((linia, index) => {
-                // Modyfikujemy tylko linie mieszczące się w wyznaczonym zakresie
-                if (index >= startLineIdx && index <= endLineIdx) {
-                    // Wyrażenie regularne dopasowujące początek linii:
-                    // Grupa 1: (\s*) -> ewentualne białe znaki na początku linii
-                    // Grupa 2: ([N:]) -> znak N lub :
-                    // Grupa 3: (\d+) -> ciąg cyfr bezpośrednio po znaku
-                    const regexPoczatkuLinii = /^(\s*)([N:])(\d+)/;
-                    const dopasowanie = linia.match(regexPoczatkuLinii);
-
-                    if (dopasowanie) {
-                        const bialeZnaki = dopasowanie[1];
-                        const znak = dopasowanie[2];
-                        // Zastępujemy stary numer nowym z licznika i doklejamy resztę linii
-                        const resztaLinii = linia.substring(dopasowanie[0].length);
-                        const nowaLinia = `${bialeZnaki}${znak}${aktualnyNumer}${resztaLinii}`;
-                        aktualnyNumer += stepValue;
-                        return nowaLinia;
-                    }
-                }
-                return linia; // Jeśli poza zakresem lub nie pasuje do schematu, zostawiamy bez zmian
-            });
-
-            // Łączymy linie z powrotem
-            const znakKoncaLinii = dokument.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
-            const nowyTekstCalosci = przetworzoneLinie.join(znakKoncaLinii);
-
-            // Zastępujemy cały dokument nowym tekstem
-            const pelnyZakres = new vscode.Range(
-                dokument.positionAt(0),
-                dokument.positionAt(pelnyTekst.length)
-            );
-
-            await editor.edit(editBuilder => {
-                editBuilder.replace(pelnyZakres, nowyTekstCalosci);
-            });
-
-            // Informujemy użytkownika o zakresie wykonanej operacji
-            const komunikatSukcesu = hasSelection
-                ? `Przenumerowano linie w obszarze zaznaczenia (linie od ${startLineIdx + 1} do ${endLineIdx + 1}). Ostatnia wartość: ${aktualnyNumer - stepValue}.`
-                : `Przenumerowano linie w całym dokumencie. Ostatnia wartość: ${aktualnyNumer - stepValue}.`;
-
-            vscode.window.showInformationMessage(komunikatSukcesu);
+            // Wywołujemy wspólną funkcję re-numerującą
+            await wykonajPrzenumerowanieLinii(editor, startValue, stepValue);
 
         } else if (wybor.label.startsWith('2')) {
             // OPCJA 2: Odwrócenie kolejności linii i wklejenie poniżej
@@ -147,11 +77,10 @@ function activate(context) {
                 vscode.window.showWarningMessage('Ta opcja wymaga zaznaczenia tekstu w edytorze!');
                 return;
             }
-
-            // Dzielimy tekst na linie
+            
             const linie = selectedText.split(/\r?\n/);
             const odwróconeLinie = [...linie].reverse();
-
+            
             const znakKoncaLinii = editor.document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
             const odwróconyTekst = odwróconeLinie.join(znakKoncaLinii);
 
@@ -159,16 +88,16 @@ function activate(context) {
                 const pozycjaWklejenia = selection.end;
                 editBuilder.insert(pozycjaWklejenia, znakKoncaLinii + odwróconyTekst);
             });
-
+            
             vscode.window.showInformationMessage('Pomyślnie odwrócono kolejność linii i wklejono poniżej.');
 
         } else if (wybor.label.startsWith('3')) {
-            // OPCJA 3: Przenumerowanie etykiet (tekstXX: gdzie XX to liczba)
+            // OPCJA 3: Przenumerowanie etykiet
             if (!selectedText) {
                 vscode.window.showWarningMessage('Ta opcja wymaga zaznaczenia tekstu w edytorze!');
                 return;
             }
-
+            
             let licznik = 1;
             const regexEtykietyCalosci = /(\b[a-zA-Z_][a-zA-Z0-9_-]*)(:)/g;
 
@@ -197,7 +126,83 @@ function activate(context) {
         }
     });
 
-    context.subscriptions.push(disposable);
+    // 2. REJESTRACJA NOWEJ KOMENDY (SZYBKA BEZ PYTAŃ - DEFAULTY 5, 5)
+    let disposableSzybkieLinii = vscode.commands.registerCommand('sinumerik-840d-edycja.szybkieNumerowanieLinii', async function () {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showWarningMessage('Brak aktywnego edytora tekstu!');
+            return;
+        }
+
+        // Natychmiastowe wywołanie z wartościami startowymi: 5 i krokiem: 5
+        await wykonajPrzenumerowanieLinii(editor, 5, 5);
+    });
+
+    context.subscriptions.push(disposableUruchom);
+    context.subscriptions.push(disposableSzybkieLinii);
+}
+
+/**
+ * Wspólna funkcja pomocnicza realizująca fizyczne przenumerowanie linii w dokumencie.
+ * @param {vscode.TextEditor} editor Aktywny edytor tekstu
+ * @param {number} startValue Wartość startowa
+ * @param {number} stepValue Krok numeracji
+ */
+async function wykonajPrzenumerowanieLinii(editor, startValue, stepValue) {
+    const selection = editor.selection;
+    const dokument = editor.document;
+    const pelnyTekst = dokument.getText();
+    const linie = pelnyTekst.split(/\r?\n/);
+    
+    let aktualnyNumer = startValue;
+    
+    const hasSelection = !selection.isEmpty;
+    let startLineIdx = 0;
+    let endLineIdx = linie.length - 1;
+
+    if (hasSelection) {
+        startLineIdx = selection.start.line;
+        endLineIdx = selection.end.line;
+        
+        if (selection.end.character === 0 && endLineIdx > startLineIdx) {
+            endLineIdx--;
+        }
+    }
+    
+    const przetworzoneLinie = linie.map((linia, index) => {
+        if (index >= startLineIdx && index <= endLineIdx) {
+            const regexPoczatkuLinii = /^(\s*)([N:])(\d+)/;
+            const dopasowanie = linia.match(regexPoczatkuLinii);
+
+            if (dopasowanie) {
+                const bialeZnaki = dopasowanie[1];
+                const znak = dopasowanie[2];
+                const resztaLinii = linia.substring(dopasowanie[0].length);
+                const nowaLinia = `${bialeZnaki}${znak}${aktualnyNumer}${resztaLinii}`;
+                aktualnyNumer += stepValue;
+                return nowaLinia;
+            }
+        }
+        return linia;
+    });
+
+    const znakKoncaLinii = dokument.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+    const nowyTekstCalosci = przetworzoneLinie.join(znakKoncaLinii);
+
+    const pelnyZakres = new vscode.Range(
+        dokument.positionAt(0),
+        dokument.positionAt(pelnyTekst.length)
+    );
+
+    await editor.edit(editBuilder => {
+        editBuilder.replace(pelnyZakres, nowyTekstCalosci);
+    });
+
+    const komunikatSukcesu = hasSelection
+        ? `Przenumerowano linie w obszarze zaznaczenia (linie od ${startLineIdx + 1} do ${endLineIdx + 1}). Ostatnia wartość: ${aktualnyNumer - stepValue}.`
+        : `Przenumerowano linie w całym dokumencie. Ostatnia wartość: ${aktualnyNumer - stepValue}.`;
+
+    vscode.window.showInformationMessage(komunikatSukcesu);
 }
 
 // Metoda wywoływana przy dezaktywacji rozszerzenia
