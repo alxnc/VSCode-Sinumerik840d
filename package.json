@@ -14,7 +14,7 @@
   "main": "./extension.js",
    "repository": {
     "type": "git",
-    "url": "https://github.com/alxnc/VSCode-Sinumerik840d"
+    "url": "https://github.com/alxnc/VSCode-Sinumerik840d.git"
   },
   "contributes": {
     "commands": [
